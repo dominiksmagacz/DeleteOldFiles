@@ -1,0 +1,104 @@
+using CSharp_MetaBots.ExcelMetabot;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+
+
+
+
+namespace DeleteOldFiles {
+	class Program {
+		
+		static string[] files;
+		static string[] dirs;
+		
+		public static List<string> baza = new List<string>();
+		
+		
+		/// <summary>This method looks at each location specified by the user and finds expired files.
+		/// It then assigns their paths to the list which it returns.
+		///    </summary>
+		public static void searchOldFiles (string path, DateTime dateExpired){
+		
+			try 
+				{	        
+					files = Directory.GetFiles(path);
+				}
+				catch (Exception e)
+				{
+					System.Console.WriteLine(e);
+				}
+			foreach (var file in files){
+			try 
+				{	        
+					DateTime modification = File.GetLastWriteTime(file);
+					if (modification<dateExpired)
+						{
+							baza.Add(file);
+						}
+				}
+				catch (Exception e)
+				{
+					System.Console.WriteLine(e);
+				}
+			
+			}
+			try 
+				{	        
+					dirs = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly);
+				}
+				catch (Exception e)
+				{
+					System.Console.WriteLine(e);
+				}
+				try 
+					{	        
+						if(dirs.Length>0){
+							foreach(var dir in dirs){
+								searchOldFiles(dir, dateExpired);
+							}
+						}
+					}
+					catch (Exception e)
+					{
+						System.Console.WriteLine(e);
+					}
+			
+		}
+		
+		
+		/// <summary>This method save to excel file all paths of expired files.
+		///    </summary>
+		public static void saveToExcelFile(string path, DateTime dateExpired){
+			
+			Excel excel = new Excel(true);
+			excel.AddWorkbook();
+			excel.Show();
+			Thread.Sleep(1500);
+			int i = 1;
+			foreach(string record in baza){
+				excel.SetValue(i,1,record);
+				i++;
+			}
+			string pathString = System.IO.Path.Combine(path, "raport"+dateExpired.ToString()+".txt");
+			Microsoft.VisualBasic.Interaction.MsgBox("Zapisz teraz plik w dowolnom lokalizacje");
+			excel.Close();
+			excel.Quit();
+		}
+		
+		
+		static void Main(string[] args) {
+			
+			string path = @Microsoft.VisualBasic.Interaction.InputBox(@"Wskaż miejsce do przeglądu plików np.(C:\)", "Wskaż Lokalizację");
+			DateTime timeNow = DateTime.Now;
+			string buff =  Microsoft.VisualBasic.Interaction.InputBox(@"Podaj w latach datę przeterminowania plików (np.6, lub 10)", "Lata");
+			int years = Int32.Parse(buff);
+			TimeSpan ts = new TimeSpan(365*years,0,0,0);//data 365 dni razy zmienna years podana przez użytkownika
+			DateTime dateExpired = timeNow.Subtract(ts);
+
+			searchOldFiles(path,dateExpired);
+			saveToExcelFile(path,dateExpired);
+        }
+    }
+}
